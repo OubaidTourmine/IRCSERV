@@ -6,14 +6,15 @@
 
 class Client {
 private:
-	int _fd;
+	int         _fd;
 	std::string _nick;
 	std::string _user;
 	std::string _host;
+	std::string _realname;
 	std::string _ipAdd;
 	std::string _buffer;
-	bool _registered;
-	bool _passOk;
+	bool        _registered;
+	bool        _passOk;
 
 public:
 	// Orthodox Canonical Form
@@ -35,9 +36,13 @@ public:
 
 	std::string getUser() const;
 	void setUser(const std::string& user);
+	void setUsername(const std::string& username);
 
 	std::string getHost() const;
 	void setHost(const std::string& host);
+
+	std::string getRealname() const;
+	void setRealname(const std::string& realname);
 
 	std::string getIpAdd() const;
 	void setIpAdd(const std::string& ipAdd);
@@ -46,6 +51,7 @@ public:
 
 	// Registration state
 	bool isPassOk() const;
+	bool IsPasswordAccepted() const;
 	void setPassOk(bool passOk);
 
 	bool isRegistered() const;

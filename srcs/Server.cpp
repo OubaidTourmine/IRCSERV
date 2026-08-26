@@ -61,10 +61,10 @@ int Server::GetPort() const
 
 void Server::CloseFds()
 {
-	for (size_t i = 0; i < this->_clients.size(); ++i)
+	for (std::map<int, Client>::iterator it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		std::cout << RED << "Client <" << this->_clients[i].GetFd() << "> Disconnected" << WHI << std::endl;
-		close(this->_clients[i].GetFd());
+		std::cout << RED << "Client <" << it->first << "> Disconnected" << WHI << std::endl;
+		close(it->first);
 	}
 	if (this->_SerSocketFd != -1)
 	{
@@ -83,13 +83,24 @@ void Server::ClearClients(int fd)
 			break;
 		}
 	}
-	for (size_t i = 0; i < this->_clients.size(); ++i)
+	Client *cli = GetClientByFd(fd);
+	if (cli)
 	{
-		if (this->_clients[i].GetFd() == fd)
+		std::map<std::string, Channel>::iterator it = this->_channels.begin();
+		while (it != this->_channels.end())
 		{
-			this->_clients.erase(this->_clients.begin() + i);
-			break;
+			it->second.removeMember(cli);
+			if (it->second.empty())
+			{
+				std::map<std::string, Channel>::iterator toErase = it++;
+				this->_channels.erase(toErase);
+			}
+			else
+			{
+				++it;
+			}
 		}
+		this->_clients.erase(fd);
 	}
 }
 
@@ -124,6 +135,16 @@ void Server::SerSocket()
 	NewPoll.events = POLLIN;
 	NewPoll.revents = 0;
 	this->_fds.push_back(NewPoll);
+}
+
+void Server::ServerInit()
+{
+	this->_Port = 4444;
+	this->_Password = "";
+	SerSocket();
+
+	std::cout << GRE << "Server <" << this->_SerSocketFd << "> Listening on port " << this->_Port << WHI << std::endl;
+	std::cout << "Waiting to accept connections..." << std::endl;
 }
 
 void Server::ServerInit(int port, const std::string& password)
@@ -164,7 +185,8 @@ void Server::AcceptNewClient()
 
 	Client cli(fd);
 	cli.setIpAdd(inet_ntoa(clientAdd.sin_addr));
-	this->_clients.push_back(cli);
+	cli.setHost(inet_ntoa(clientAdd.sin_addr));
+	this->_clients[fd] = cli;
 
 	std::cout << GRE << "Client <" << fd << "> Connected from IP " << inet_ntoa(clientAdd.sin_addr) << WHI << std::endl;
 }
@@ -190,19 +212,23 @@ void Server::ReceiveNewData(int fd)
 
 	cli->AppendToBuffer(std::string(buff, bytes));
 
-	std::string &inbuf = cli->GetBuffer();
-	size_t pos;
-	while ((pos = inbuf.find('\n')) != std::string::npos)
+	while (true)
 	{
-		std::string line = inbuf.substr(0, pos);
+		Client *c = GetClientByFd(fd);
+		if (!c) break;
+		
+		size_t pos = c->GetBuffer().find('\n');
+		if (pos == std::string::npos) break;
+
+		std::string line = c->GetBuffer().substr(0, pos);
 		if (!line.empty() && line[line.size() - 1] == '\r')
 			line.erase(line.size() - 1);
-		inbuf.erase(0, pos + 1);
+		c->GetBuffer().erase(0, pos + 1);
 
 		if (line.empty())
 			continue;
 
-		ParseCommands(*cli, line);
+		ParseCommands(*c, line);
 	}
 }
 
@@ -234,10 +260,18 @@ void Server::ServerRun()
 
 Client* Server::GetClientByFd(int fd)
 {
-	for (size_t i = 0; i < this->_clients.size(); ++i)
+	std::map<int, Client>::iterator it = this->_clients.find(fd);
+	if (it != this->_clients.end())
+		return &it->second;
+	return NULL;
+}
+
+Client* Server::GetClientByNick(const std::string &nick)
+{
+	for (std::map<int, Client>::iterator it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (this->_clients[i].GetFd() == fd)
-			return &this->_clients[i];
+		if (it->second.getNick() == nick)
+			return &it->second;
 	}
 	return NULL;
 }
@@ -256,29 +290,203 @@ void Server::ParseCommands(Client &client, const std::string &line)
 	if (cmd.command.empty())
 		return;
 
-	for (size_t i = 0; i < cmd.command.size(); ++i)
+	for (size_t i = 0; i < cmd.command.size(); i++)
 		cmd.command[i] = std::toupper(cmd.command[i]);
-
-	std::cout << YEL << "Client <" << client.GetFd() << "> Command: [" << cmd.command << "]" << WHI << std::endl;
 
 	if (cmd.command == "PASS")
 		HandlePass(client, cmd);
+	else if (cmd.command == "NICK")
+		HandleNick(client, cmd);
+	else if (cmd.command == "USER")
+		HandleUser(client, cmd);
+	else if (cmd.command == "PING")
+		HandlePing(client, cmd);
+	else if (cmd.command == "CAP")
+		HandleCap(client, cmd);
+	else if (cmd.command == "QUIT")
+		HandleQuit(client, cmd);
+
+	CheckRegistration(client);
 }
 
 void Server::HandlePass(Client &client, const command &cmd)
 {
+	std::string nick = client.getNick().empty() ? "*" : client.getNick();
+	if (cmd.params.empty())
+		SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(nick, "PASS"));
+	else if (client.isRegistered())
+		SendReply(client.GetFd(), ":ft_ircserv 462 " + nick + " :You may not reregister");
+	else if (cmd.params[0] != this->_Password)
+		SendReply(client.GetFd(), ERR_PASSWDMISMATCH(nick));
+	else
+		client.setPassOk(true);
+}
+
+void Server::HandleNick(Client &client, const command &cmd)
+{
+	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
 	if (cmd.params.empty())
 	{
-		SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(client.getNick().empty() ? "*" : client.getNick(), "PASS"));
+		SendReply(client.GetFd(), ":ft_ircserv 431 " + clientNick + " :No nickname given");
 		return;
 	}
-	if (cmd.params[0] == this->_Password)
+
+	std::string newNick = cmd.params[0];
+
+	if (newNick.empty() || newNick.length() > 9)
 	{
-		client.setPassOk(true);
-		SendReply(client.GetFd(), ":ft_ircserv NOTICE * :Password accepted");
+		SendReply(client.GetFd(), ":ft_ircserv 432 " + clientNick + " " + newNick + " :Erroneous nickname");
+		return;
 	}
-	else
+	if (!std::isalpha(newNick[0]))
 	{
-		SendReply(client.GetFd(), ERR_PASSWDMISMATCH(client.getNick().empty() ? "*" : client.getNick()));
+		SendReply(client.GetFd(), ":ft_ircserv 432 " + clientNick + " " + newNick + " :Erroneous nickname");
+		return;
+	}
+
+	for (size_t i = 1; i < newNick.length(); ++i)
+	{
+		if (!std::isalnum(newNick[i]) &&
+			newNick[i] != '[' &&
+			newNick[i] != ']' &&
+			newNick[i] != '\\' &&
+			newNick[i] != '`' &&
+			newNick[i] != '^' &&
+			newNick[i] != '_' &&
+			newNick[i] != '-')
+		{
+			SendReply(client.GetFd(), ":ft_ircserv 432 " + clientNick + " " + newNick + " :Erroneous nickname");
+			return;
+		}
+	}
+
+	Client *existing = GetClientByNick(newNick);
+	if (existing && existing->getFd() != client.getFd())
+	{
+		SendReply(client.GetFd(), ":ft_ircserv 433 " + clientNick + " " + newNick + " :Nickname is already in use");
+		return;
+	}
+
+	std::string oldNick = client.getNick();
+	if (oldNick == newNick)
+		return;
+
+	client.setNick(newNick);
+
+	if (client.isRegistered())
+	{
+		std::string message = ":" + oldNick + "!" + client.getUser() + "@" + (client.getHost().empty() ? client.getIpAdd() : client.getHost()) + " NICK :" + newNick;
+		SendReply(client.GetFd(), message);
+		BroadcastToSharedChannels(&client, message, &client);
+	}
+}
+
+void Server::HandleUser(Client &client, const command &cmd)
+{
+	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
+	if (client.isRegistered())
+	{
+		SendReply(client.GetFd(), ":ft_ircserv 462 " + clientNick + " :Unauthorized command (already registered)");
+		return;
+	}
+
+	if (cmd.params.size() < 4)
+	{
+		SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(clientNick, "USER"));
+		return;
+	}
+
+	std::string username = cmd.params[0];
+	std::string realname = cmd.params[3];
+
+	if (username.empty() || realname.empty())
+	{
+		SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(clientNick, "USER"));
+		return;
+	}
+
+	client.setUsername(username);
+	client.setRealname(realname);
+}
+
+void Server::CheckRegistration(Client &client)
+{
+	if (client.isRegistered())
+		return;
+
+	if (!client.IsPasswordAccepted())
+		return;
+
+	if (client.getNick().empty())
+		return;
+
+	if (client.getUser().empty())
+		return;
+
+	client.setRegistered(true);
+
+	std::string nick = client.getNick();
+	SendReply(client.GetFd(), RPL_WELCOME(nick));
+	SendReply(client.GetFd(), ":ft_ircserv 002 " + nick + " :Your host is ft_ircserv, running version 1.0");
+	SendReply(client.GetFd(), ":ft_ircserv 003 " + nick + " :This server was created 2026");
+	SendReply(client.GetFd(), ":ft_ircserv 004 " + nick + " ft_ircserv 1.0 o itkol");
+}
+
+void Server::HandlePing(Client &client, const command &cmd)
+{
+	if (cmd.params.empty())
+		SendReply(client.GetFd(), ":ft_ircserv 461 " + (client.getNick().empty() ? "*" : client.getNick()) + " PING :Not enough parameters");
+	else
+		SendReply(client.GetFd(), ":ft_ircserv PONG ft_ircserv :" + cmd.params[0]);
+}
+
+void Server::HandleCap(Client &client, const command &cmd)
+{
+	if (!cmd.params.empty() && cmd.params[0] == "LS")
+		SendReply(client.GetFd(), ":ft_ircserv CAP * LS :");
+}
+
+void Server::HandleQuit(Client &client, const command &cmd)
+{
+	std::string reason = cmd.params.empty() ? "Client Quit" : cmd.params[0];
+	DisconnectClient(client.GetFd(), reason);
+}
+
+void Server::DisconnectClient(int fd, const std::string &reason)
+{
+	Client *cli = GetClientByFd(fd);
+	if (!cli)
+		return;
+
+	std::string quitMsg = ":" + cli->prefix() + " QUIT :" + reason;
+	BroadcastToSharedChannels(cli, quitMsg, cli);
+
+	std::cout << RED << "Client <" << fd << "> Disconnected (" << reason << ")" << WHI << std::endl;
+	close(fd);
+	ClearClients(fd);
+}
+
+void Server::BroadcastToSharedChannels(Client *client, const std::string &message, Client *exclude)
+{
+	if (!client)
+		return;
+
+	std::set<Client*> recipients;
+	for (std::map<std::string, Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
+	{
+		if (it->second.isMember(client))
+		{
+			std::set<Client*> members = it->second.getMembers();
+			for (std::set<Client*>::iterator mit = members.begin(); mit != members.end(); ++mit)
+			{
+				if (*mit != exclude && *mit != client)
+					recipients.insert(*mit);
+			}
+		}
+	}
+
+	for (std::set<Client*>::iterator rit = recipients.begin(); rit != recipients.end(); ++rit)
+	{
+		SendReply((*rit)->getFd(), message);
 	}
 }

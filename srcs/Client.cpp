@@ -1,5 +1,6 @@
 #include "Client.hpp"
 #include <iostream>
+#include <sys/socket.h>
 
 Client::Client()
 {
@@ -7,6 +8,7 @@ Client::Client()
 	this->_nick = "";
 	this->_user = "";
 	this->_host = "";
+	this->_realname = "";
 	this->_ipAdd = "";
 	this->_buffer = "";
 	this->_registered = false;
@@ -19,6 +21,7 @@ Client::Client(int fd)
 	this->_nick = "";
 	this->_user = "";
 	this->_host = "";
+	this->_realname = "";
 	this->_ipAdd = "";
 	this->_buffer = "";
 	this->_registered = false;
@@ -31,6 +34,7 @@ Client::Client(int fd, const std::string& nick, const std::string& user, const s
 	this->_nick = nick;
 	this->_user = user;
 	this->_host = host;
+	this->_realname = "";
 	this->_ipAdd = "";
 	this->_buffer = "";
 	this->_registered = true;
@@ -50,6 +54,7 @@ Client& Client::operator=(const Client& other)
 		this->_nick = other._nick;
 		this->_user = other._user;
 		this->_host = other._host;
+		this->_realname = other._realname;
 		this->_ipAdd = other._ipAdd;
 		this->_buffer = other._buffer;
 		this->_registered = other._registered;
@@ -103,6 +108,11 @@ void Client::setUser(const std::string& user)
 	this->_user = user;
 }
 
+void Client::setUsername(const std::string& username)
+{
+	this->_user = username;
+}
+
 std::string Client::getHost() const
 {
 	return this->_host;
@@ -111,6 +121,16 @@ std::string Client::getHost() const
 void Client::setHost(const std::string& host)
 {
 	this->_host = host;
+}
+
+std::string Client::getRealname() const
+{
+	return this->_realname;
+}
+
+void Client::setRealname(const std::string& realname)
+{
+	this->_realname = realname;
 }
 
 std::string Client::getIpAdd() const
@@ -125,10 +145,15 @@ void Client::setIpAdd(const std::string& ipAdd)
 
 std::string Client::prefix() const
 {
-	return this->_nick + "!" + this->_user + "@" + this->_host;
+	return this->_nick + "!" + this->_user + "@" + (this->_host.empty() ? this->_ipAdd : this->_host);
 }
 
 bool Client::isPassOk() const
+{
+	return this->_passOk;
+}
+
+bool Client::IsPasswordAccepted() const
 {
 	return this->_passOk;
 }
@@ -165,5 +190,8 @@ void Client::ClearBuffer()
 
 void Client::queueOutput(const std::string& msg)
 {
-	std::cout << "[to " << this->_nick << "] " << msg;
+	std::string output = msg;
+	if (output.size() < 2 || output.substr(output.size() - 2) != "\r\n")
+		output += "\r\n";
+	send(this->_fd, output.c_str(), output.size(), 0);
 }

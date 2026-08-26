@@ -29,12 +29,12 @@
 
 class Server {
 private:
-	int                         _Port;
-	std::string                 _Password;
-	int                         _SerSocketFd;
-	static bool                 _Signal;
-	std::vector<Client>         _clients;
-	std::vector<struct pollfd>  _fds;
+	int                            _Port;
+	std::string                    _Password;
+	int                            _SerSocketFd;
+	static bool                    _Signal;
+	std::map<int, Client>          _clients;
+	std::vector<struct pollfd>     _fds;
 	std::map<std::string, Channel> _channels;
 
 public:
@@ -51,6 +51,7 @@ public:
 	int GetPort() const;
 
 	// Server Engine
+	void ServerInit();
 	void ServerInit(int port, const std::string& password);
 	void SerSocket();
 	void AcceptNewClient();
@@ -60,15 +61,25 @@ public:
 	// Command Dispatch & Handlers
 	void ParseCommands(Client &client, const std::string &line);
 	void HandlePass(Client &client, const command &cmd);
+	void HandleNick(Client &client, const command &cmd);
+	void HandleUser(Client &client, const command &cmd);
+	void HandlePing(Client &client, const command &cmd);
+	void HandleCap(Client &client, const command &cmd);
+	void HandleQuit(Client &client, const command &cmd);
+	void CheckRegistration(Client &client);
 
 	// Signals & Cleanup
 	static void SignalHandler(int signum);
 	void CloseFds();
 	void ClearClients(int fd);
+	void DisconnectClient(int fd, const std::string &reason);
+	void BroadcastToSharedChannels(Client *client, const std::string &message, Client *exclude = NULL);
 
 	// Client Lookups & Replies
 	Client* GetClientByFd(int fd);
+	Client* GetClientByNick(const std::string &nick);
 	void SendReply(int fd, const std::string &message);
 };
 
 #endif
+
