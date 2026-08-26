@@ -1,0 +1,26 @@
+# Binaries & Executables
+ircserv
+*.out
+*.exe
+*.dSYM/
+
+# Object files & Libraries
+*.o
+*.a
+*.so
+*.dylib
+
+# Documents & Subject files
+*.pdf
+
+# Markdown & Guides
+SERVER_CLIENT_GUIDE.md
+
+# Editor and IDE metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
