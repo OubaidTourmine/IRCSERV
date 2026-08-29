@@ -77,7 +77,7 @@ public:
 
 
 
-	// Signals & Cleanup
+	// Signals & Cleanu
 	static void SignalHandler(int signum);
 	void CloseFds();
 	void ClearClients(int fd);
