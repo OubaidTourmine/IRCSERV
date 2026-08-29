@@ -63,6 +63,8 @@ public:
 	void HandlePass(Client &client, const command &cmd);
 	void HandleNick(Client &client, const command &cmd);
 	void HandleUser(Client &client, const command &cmd);
+	void HandlePrivmsg(Client &client, const command &cmd);
+	void HandleTopic(Client &client, const command &cmd);
 	void HandlePing(Client &client, const command &cmd);
 	void HandleCap(Client &client, const command &cmd);
 	void HandleQuit(Client &client, const command &cmd);
