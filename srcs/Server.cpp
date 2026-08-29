@@ -86,14 +86,14 @@ void Server::ClearClients(int fd)
 	Client *cli = GetClientByFd(fd);
 	if (cli)
 	{
-		std::map<std::string, Channel>::iterator it = this->_channels.begin();
+		std::vector<Channel>::iterator it = this->_channels.begin();
 		while (it != this->_channels.end())
 		{
-			it->second.removeMember(cli);
-			if (it->second.empty())
+			it->removeMember(cli);
+			if (it->isEmpty())
 			{
-				std::map<std::string, Channel>::iterator toErase = it++;
-				this->_channels.erase(toErase);
+				it = this->_channels.erase(it);
+				continue;
 			}
 			else
 			{
@@ -309,6 +309,8 @@ void Server::ParseCommands(Client &client, const std::string &line)
 		HandleCap(client, cmd);
 	else if (cmd.command == "QUIT")
 		HandleQuit(client, cmd);
+	else if (cmd.command == "JOIN")
+		HandleJoin(client, cmd);
 
 	CheckRegistration(client);
 }
@@ -413,6 +415,65 @@ void Server::HandleUser(Client &client, const command &cmd)
 	client.setRealname(realname);
 }
 
+void Server::HandleJoin(Client &client, const command &cmd)
+{
+	if (cmd.params.empty())
+	{
+		SendReply(client.GetFd(), "461 JOIN :Not enough parameters");
+		return;
+	}
+
+	std::string ChannelName = cmd.params[0];
+
+	if (ChannelName.empty() || ChannelName[0] != '#')
+	{
+		SendReply(client.GetFd(), "403 " + ChannelName + " :No such channel");
+        return;
+	}
+
+	Channel *chan = GetChannelByName(ChannelName);
+
+	if (!chan) // if the channel doesnt exist we create it 
+	{
+		_channels.push_back(Channel(ChannelName));
+        chan = GetChannelByName(ChannelName);
+        chan->addMember(&client);
+        chan->addOperator(&client); // the creator become operator
+	}
+	else
+	{
+		if (chan->isMember(&client))
+			return;
+		chan->addMember(&client);
+	}
+
+	std::string joinMsg = ":" + client.getNick() + " JOIN :" + ChannelName;
+	std::set<Client*> members = chan->getMembers();
+	for (std::set<Client*>::iterator it = members.begin(); it != members.end(); ++it)
+		SendReply((*it)->GetFd(), joinMsg);
+
+	// send topic info to the client who join
+	if (chan->getTopic().empty())
+		SendReply(client.GetFd(), "331 " + client.getNick() + " " + ChannelName + " :No topic is set");
+	else
+		SendReply(client.GetFd(), "332 " + client.getNick() + " " + ChannelName + " :" + chan->getTopic());
+
+	std::string names = "353 " + client.getNick() + " = " + ChannelName + " :";
+	for (std::set<Client*>::iterator it = members.begin(); it != members.end(); ++it)
+	{
+		if (chan->isOperator(*it))
+			names += "@";
+		names += (*it)->getNick();
+		std::set<Client*>::iterator next = it;
+		if (++next != members.end())
+			names += " ";
+	}
+	SendReply(client.GetFd(), names);
+	SendReply(client.GetFd(), "366 " + client.getNick() + " " + ChannelName + " :End of /NAMES list");
+	// send names list to the joiner
+
+}
+
 void Server::CheckRegistration(Client &client)
 {
 	if (client.isRegistered())
@@ -436,133 +497,133 @@ void Server::CheckRegistration(Client &client)
 	SendReply(client.GetFd(), ":ft_ircserv 004 " + nick + " ft_ircserv 1.0 o itkol");
 }
 
-void Server::HandlePrivmsg(Client &client, const command &cmd)
-{
-	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
-	if (!client.isRegistered())
-	{
-		SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
-		return;
-	}
-
-	if (cmd.params.empty())
-	{
-		SendReply(client.GetFd(), ERR_NORECIPIENT(clientNick, "PRIVMSG"));
-		return;
-	}
-
-	if (cmd.params.size() < 2 || cmd.params[1].empty())
-	{
-		SendReply(client.GetFd(), ERR_NOTEXTTOSEND(clientNick));
-		return;
-	}
-
-	std::string targets = cmd.params[0];
-	std::string text = cmd.params[1];
-	for (size_t i = 2; i < cmd.params.size(); ++i)
-		text += " " + cmd.params[i];
-
-	size_t start = 0;
-	while (start < targets.size())
-	{
-		size_t comma = targets.find(',', start);
-		std::string target = (comma == std::string::npos) ? targets.substr(start) : targets.substr(start, comma - start);
-		start = (comma == std::string::npos) ? targets.size() : comma + 1;
-
-		if (target.empty())
-			continue;
-
-		std::string formattedMsg = ":" + client.prefix() + " PRIVMSG " + target + " :" + text;
-
-		// Channel target
-		if (target[0] == '#' || target[0] == '&')
-		{
-			std::map<std::string, Channel>::iterator it = this->_channels.find(target);
-			if (it == this->_channels.end())
-			{
-				SendReply(client.GetFd(), ERR_NOSUCHCHANNEL(clientNick, target));
-				continue;
-			}
-
-			if (!it->second.isMember(&client))
-			{
-				SendReply(client.GetFd(), ERR_CANNOTSENDTOCHAN(clientNick, target));
-				continue;
-			}
-
-			it->second.broadcast(formattedMsg, &client);
-		}
-		// User target
-		else
-		{
-			Client *targetClient = GetClientByNick(target);
-			if (!targetClient)
-			{
-				SendReply(client.GetFd(), ERR_NOSUCHNICK(clientNick, target));
-				continue;
-			}
-
-			SendReply(targetClient->GetFd(), formattedMsg);
-		}
-	}
-}
-
 void Server::HandleTopic(Client &client, const command &cmd)
 {
-	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
-	if (!client.isRegistered())
-	{
-		SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
-		return;
-	}
+    std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
+    if (!client.isRegistered())
+    {
+        SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
+        return;
+    }
 
-	if (cmd.params.empty())
-	{
-		SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(clientNick, "TOPIC"));
-		return;
-	}
+    if (cmd.params.empty())
+    {
+        SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(clientNick, "TOPIC"));
+        return;
+    }
 
-	std::string chanName = cmd.params[0];
-	std::map<std::string, Channel>::iterator it = this->_channels.find(chanName);
-	if (it == this->_channels.end())
-	{
-		SendReply(client.GetFd(), ERR_NOSUCHCHANNEL(clientNick, chanName));
-		return;
-	}
+    std::string chanName = cmd.params[0];
+    Channel *chan = GetChannelByName(chanName);
+    if (!chan)
+    {
+        SendReply(client.GetFd(), ERR_NOSUCHCHANNEL(clientNick, chanName));
+        return;
+    }
 
-	if (!it->second.isMember(&client))
-	{
-		SendReply(client.GetFd(), ERR_NOTONCHANNEL(clientNick, chanName));
-		return;
-	}
+    if (!chan->isMember(&client))
+    {
+        SendReply(client.GetFd(), ERR_NOTONCHANNEL(clientNick, chanName));
+        return;
+    }
 
-	// 1 parameter: View current topic
-	if (cmd.params.size() == 1)
-	{
-		if (it->second.getTopic().empty())
-			SendReply(client.GetFd(), RPL_NOTOPIC(clientNick, chanName));
-		else
-			SendReply(client.GetFd(), RPL_TOPIC(clientNick, chanName, it->second.getTopic()));
-		return;
-	}
+    // 1 parameter: View current topic
+    if (cmd.params.size() == 1)
+    {
+        if (chan->getTopic().empty())
+            SendReply(client.GetFd(), RPL_NOTOPIC(clientNick, chanName));
+        else
+            SendReply(client.GetFd(), RPL_TOPIC(clientNick, chanName, chan->getTopic()));
+        return;
+    }
 
-	// 2 or more parameters: Set / Change topic
-	// Check +t mode restrictions: if topic is restricted and client is not an operator
-	if (it->second.isTopicRestricted() && !it->second.isOperator(&client))
-	{
-		SendReply(client.GetFd(), ERR_CHANOPRIVSNEEDED(clientNick, chanName));
-		return;
-	}
+    // 2 or more parameters: Set / Change topic
+    // Check +t mode restrictions: if topic is restricted and client is not an operator
+    if (chan->isTopicRestricted() && !chan->isOperator(&client))
+    {
+        SendReply(client.GetFd(), ERR_CHANOPRIVSNEEDED(clientNick, chanName));
+        return;
+    }
 
-	std::string newTopic = cmd.params[1];
-	for (size_t i = 2; i < cmd.params.size(); ++i)
-		newTopic += " " + cmd.params[i];
+    std::string newTopic = cmd.params[1];
+    for (size_t i = 2; i < cmd.params.size(); ++i)
+        newTopic += " " + cmd.params[i];
 
-	it->second.setTopic(newTopic);
+    chan->setTopic(newTopic);
 
-	// Broadcast topic change to ALL channel members (including sender)
-	std::string topicMsg = ":" + client.prefix() + " TOPIC " + chanName + " :" + newTopic;
-	it->second.broadcast(topicMsg);
+    // Broadcast topic change to ALL channel members (including sender)
+    std::string topicMsg = ":" + client.prefix() + " TOPIC " + chanName + " :" + newTopic;
+    chan->broadcast(topicMsg);
+}
+
+void Server::HandlePrivmsg(Client &client, const command &cmd)
+{
+    std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
+    if (!client.isRegistered())
+    {
+        SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
+        return;
+    }
+
+    if (cmd.params.empty())
+    {
+        SendReply(client.GetFd(), ERR_NORECIPIENT(clientNick, "PRIVMSG"));
+        return;
+    }
+
+    if (cmd.params.size() < 2 || cmd.params[1].empty())
+    {
+        SendReply(client.GetFd(), ERR_NOTEXTTOSEND(clientNick));
+        return;
+    }
+
+    std::string targets = cmd.params[0];
+    std::string text = cmd.params[1];
+    for (size_t i = 2; i < cmd.params.size(); ++i)
+        text += " " + cmd.params[i];
+
+    size_t start = 0;
+    while (start < targets.size())
+    {
+        size_t comma = targets.find(',', start);
+        std::string target = (comma == std::string::npos) ? targets.substr(start) : targets.substr(start, comma - start);
+        start = (comma == std::string::npos) ? targets.size() : comma + 1;
+
+        if (target.empty())
+            continue;
+
+        std::string formattedMsg = ":" + client.prefix() + " PRIVMSG " + target + " :" + text;
+
+        // Channel target
+        if (target[0] == '#' || target[0] == '&')
+        {
+            Channel *chan = GetChannelByName(target);
+            if (!chan)
+            {
+                SendReply(client.GetFd(), ERR_NOSUCHCHANNEL(clientNick, target));
+                continue;
+            }
+
+            if (!chan->isMember(&client))
+            {
+                SendReply(client.GetFd(), ERR_CANNOTSENDTOCHAN(clientNick, target));
+                continue;
+            }
+
+            chan->broadcast(formattedMsg, &client);
+        }
+        // User target
+        else
+        {
+            Client *targetClient = GetClientByNick(target);
+            if (!targetClient)
+            {
+                SendReply(client.GetFd(), ERR_NOSUCHNICK(clientNick, target));
+                continue;
+            }
+
+            SendReply(targetClient->GetFd(), formattedMsg);
+        }
+    }
 }
 
 void Server::HandlePing(Client &client, const command &cmd)
@@ -605,11 +666,11 @@ void Server::BroadcastToSharedChannels(Client *client, const std::string &messag
 		return;
 
 	std::set<Client*> recipients;
-	for (std::map<std::string, Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
+	for (std::vector<Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
 	{
-		if (it->second.isMember(client))
+		if (it->isMember(client))
 		{
-			std::set<Client*> members = it->second.getMembers();
+			std::set<Client*> members = it->getMembers();
 			for (std::set<Client*>::iterator mit = members.begin(); mit != members.end(); ++mit)
 			{
 				if (*mit != exclude && *mit != client)
@@ -622,4 +683,14 @@ void Server::BroadcastToSharedChannels(Client *client, const std::string &messag
 	{
 		SendReply((*rit)->getFd(), message);
 	}
+}
+
+Channel* Server::GetChannelByName(const std::string &name)
+{
+	for (size_t i = 0; i < _channels.size(); i++)
+	{
+		if (_channels[i].getName() == name)
+			return &_channels[i];
+	}
+	return NULL;
 }

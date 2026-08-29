@@ -35,7 +35,7 @@ private:
 	static bool                    _Signal;
 	std::map<int, Client>          _clients;
 	std::vector<struct pollfd>     _fds;
-	std::map<std::string, Channel> _channels;
+	std::vector<Channel> _channels;
 
 public:
 	// Orthodox Canonical Form
@@ -68,9 +68,16 @@ public:
 	void HandlePing(Client &client, const command &cmd);
 	void HandleCap(Client &client, const command &cmd);
 	void HandleQuit(Client &client, const command &cmd);
+	void HandleJoin(Client &client, const command &cmd);
 	void CheckRegistration(Client &client);
 
-	// Signals & Cleanup
+	// Channels
+
+	Channel* GetChannelByName(const std::string &name);
+
+
+
+	// Signals & Cleanu
 	static void SignalHandler(int signum);
 	void CloseFds();
 	void ClearClients(int fd);
