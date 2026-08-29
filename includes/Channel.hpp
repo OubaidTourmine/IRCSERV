@@ -30,17 +30,20 @@ public:
 	void addMember(Client* c);
 	void removeMember(Client* c);
 	bool isMember(Client* c) const;
+	bool isEmpty() const;
 	std::set<Client*> getMembers() const;
-	bool empty() const;
 
 	// Operators
 	void addOperator(Client* c);
-	void removeOperator(Client* c);
 	bool isOperator(Client* c) const;
+	void removeOperator(Client* c);
 
 	// Topic
 	std::string getTopic() const;
 	void setTopic(const std::string& topic);
+
+	//========================================
+
 
 	// Modes
 	bool isInviteOnly() const;      // +i

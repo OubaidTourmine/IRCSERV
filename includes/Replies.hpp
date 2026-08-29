@@ -54,4 +54,28 @@ inline std::string ERR_BADCHANNELKEY(const std::string& nick, const std::string&
 	return ":ft_ircserv 475 " + nick + " " + chan + " :Cannot join channel (+k)";
 }
 
+inline std::string ERR_CANNOTSENDTOCHAN(const std::string& nick, const std::string& chan) {
+    return ":ft_ircserv 404 " + nick + " " + chan + " :Cannot send to channel";
+}
+
+inline std::string ERR_NORECIPIENT(const std::string& nick, const std::string& cmd) {
+    return ":ft_ircserv 411 " + nick + " :No recipient given (" + cmd + ")";
+}
+
+inline std::string ERR_NOTEXTTOSEND(const std::string& nick) {
+    return ":ft_ircserv 412 " + nick + " :No text to send";
+}
+
+inline std::string ERR_NOTREGISTERED(const std::string& nick) {
+    return ":ft_ircserv 451 " + nick + " :You have not registered";
+}
+
+inline std::string RPL_NOTOPIC(const std::string& nick, const std::string& chan) {
+    return ":ft_ircserv 331 " + nick + " " + chan + " :No topic is set";
+}
+
+inline std::string ERR_NOSUCHNICK(const std::string& nick, const std::string& target) {
+    return ":ft_ircserv 401 " + nick + " " + target + " :No such nick/channel";
+}
+
 #endif
