@@ -251,10 +251,7 @@ void Server::ServerRun()
 				if (this->_fds[i].fd == this->_SerSocketFd)
 					AcceptNewClient();
 				else
-				{
 					ReceiveNewData(this->_fds[i].fd);
-					break;
-				}
 			}
 		}
 	}
@@ -645,13 +642,7 @@ void Server::HandleCap(Client &client, const command &cmd)
 
 void Server::HandleQuit(Client &client, const command &cmd)
 {
-	std::string reason = "Client Quit";
-	if (!cmd.params.empty())
-	{
-		reason = cmd.params[0];
-		for (size_t i = 1; i < cmd.params.size(); ++i)
-			reason += " " + cmd.params[i];
-	}
+	std::string reason = cmd.params.empty() ? "Client Quit" : cmd.params[0];
 	DisconnectClient(client.GetFd(), reason);
 }
 
@@ -663,9 +654,6 @@ void Server::DisconnectClient(int fd, const std::string &reason)
 
 	std::string quitMsg = ":" + cli->prefix() + " QUIT :" + reason;
 	BroadcastToSharedChannels(cli, quitMsg, cli);
-
-	std::string errClosing = "ERROR :Closing Link: " + (cli->getHost().empty() ? cli->getIpAdd() : cli->getHost()) + " (" + reason + ")";
-	SendReply(fd, errClosing);
 
 	std::cout << RED << "Client <" << fd << "> Disconnected (" << reason << ")" << WHI << std::endl;
 	close(fd);
