@@ -68,7 +68,9 @@ public:
 	void HandlePing(Client &client, const command &cmd);
 	void HandleCap(Client &client, const command &cmd);
 	void HandleQuit(Client &client, const command &cmd);
+	void HandlePart(Client &client, const command &cmd);
 	void HandleJoin(Client &client, const command &cmd);
+	void HandleKick(Client &client, const command &cmd);
 	void CheckRegistration(Client &client);
 
 	// Channels

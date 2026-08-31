@@ -45,9 +45,7 @@ Channel& Channel::operator=(const Channel& other)
 	return *this;
 }
 
-Channel::~Channel()
-{
-}
+Channel::~Channel() {}
 
 // void Channel::addMember(Client* c)
 // {

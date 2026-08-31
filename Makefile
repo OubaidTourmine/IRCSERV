@@ -9,6 +9,7 @@ SRCS =	srcs/main.cpp \
 		srcs/Command.cpp \
 		srcs/Channel.cpp \
 		srcs/commands/Pass.cpp \
+		srcs/commands/Kick.cpp \
 		srcs/commands/Nick.cpp \
 		srcs/commands/User.cpp \
 		srcs/commands/Join.cpp \
@@ -16,6 +17,7 @@ SRCS =	srcs/main.cpp \
 		srcs/commands/Topic.cpp \
 		srcs/commands/Ping.cpp \
 		srcs/commands/Cap.cpp \
+		srcs/commands/Part.cpp \
 		srcs/commands/Quit.cpp
 
 OBJS = $(SRCS:.cpp=.o)

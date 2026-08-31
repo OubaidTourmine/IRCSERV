@@ -309,8 +309,12 @@ void Server::ParseCommands(Client &client, const std::string &line)
 		HandleCap(client, cmd);
 	else if (cmd.command == "QUIT")
 		HandleQuit(client, cmd);
+	else if (cmd.command == "PART")
+		HandlePart(client, cmd);
 	else if (cmd.command == "JOIN")
 		HandleJoin(client, cmd);
+	else if (cmd.command == "KICK")
+		HandleKick(client, cmd);
 
 	CheckRegistration(client);
 }
