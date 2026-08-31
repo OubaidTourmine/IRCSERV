@@ -355,6 +355,7 @@ void Server::DisconnectClient(int fd, const std::string &reason)
 	SendReply(fd, errClosing);
 
 	std::cout << RED << "Client <" << fd << "> Disconnected (" << reason << ")" << WHI << std::endl;
+	shutdown(fd, SHUT_RDWR);
 	close(fd);
 	ClearClients(fd);
 }
