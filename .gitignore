@@ -18,6 +18,7 @@ SERVER_CLIENT_GUIDE.md
 
 # Editor and IDE metadata
 .vscode/
+.vscode
 .idea/
 *.swp
 *.swo
