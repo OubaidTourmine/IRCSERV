@@ -315,6 +315,10 @@ void Server::ParseCommands(Client &client, const std::string &line)
 		HandleJoin(client, cmd);
 	else if (cmd.command == "KICK")
 		HandleKick(client, cmd);
+	else if (cmd.command == "MODE")
+		HandleMode(client, cmd);
+	else if (cmd.command == "INVITE")
+		HandleInvite(client, cmd);
 
 	CheckRegistration(client);
 }

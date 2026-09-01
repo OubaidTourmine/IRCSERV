@@ -18,7 +18,9 @@ SRCS =	srcs/main.cpp \
 		srcs/commands/Ping.cpp \
 		srcs/commands/Cap.cpp \
 		srcs/commands/Part.cpp \
-		srcs/commands/Quit.cpp
+		srcs/commands/Quit.cpp \
+		srcs/commands/Invite.cpp \
+		srcs/commands/Mode.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 

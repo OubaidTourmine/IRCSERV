@@ -29,6 +29,30 @@ void Server::HandleJoin(Client &client, const command &cmd)
 	{
 		if (chan->isMember(&client))
 			return;
+
+		if (chan->isInviteOnly() && !chan->isInvited(&client))
+		{
+			SendReply(client.GetFd(), ERR_INVITEONLYCHAN(client.getNick(), ChannelName));
+			return;
+		}
+
+		if (chan->hasKey())
+		{
+			std::string keyProvided = cmd.params.size() > 1 ? cmd.params[1] : "";
+			if (keyProvided != chan->getKey())
+			{
+				SendReply(client.GetFd(), ERR_BADCHANNELKEY(client.getNick(), ChannelName));
+				return;
+			}
+		}
+
+		if (chan->getUserLimit() != -1 && (int)chan->getMembers().size() >= chan->getUserLimit())
+		{
+			SendReply(client.GetFd(), ERR_CHANNELISFULL(client.getNick(), ChannelName));
+			return;
+		}
+
+		chan->consumeInvite(&client);
 		chan->addMember(&client);
 	}
 

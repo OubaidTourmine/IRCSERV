@@ -2,6 +2,7 @@
 #define SERVER_HPP
 
 #include <iostream>
+#include <cstdlib>
 #include <string>
 #include <cstring>
 #include <cctype>
@@ -71,6 +72,8 @@ public:
 	void HandlePart(Client &client, const command &cmd);
 	void HandleJoin(Client &client, const command &cmd);
 	void HandleKick(Client &client, const command &cmd);
+	void HandleInvite(Client &client, const command &cmd);
+	void HandleMode(Client &client, const command &cmd);
 	void CheckRegistration(Client &client);
 
 	// Channels

@@ -78,4 +78,27 @@ inline std::string ERR_BADCHANNELKEY(const std::string& nick, const std::string&
 	return ":ft_ircserv 475 " + nick + " " + chan + " :Cannot join channel (+k)";
 }
 
+inline std::string ERR_UNKNOWNMODE(const std::string& nick, char mode, const std::string& chan) {
+	return ":ft_ircserv 472 " + nick + " " + mode + " :is unknown mode char to me for " + chan;
+}
+
+inline std::string RPL_CHANNELMODEIS(const std::string& nick, const std::string& chan, const std::string& modes, const std::string& params) {
+	std::string res = ":ft_ircserv 324 " + nick + " " + chan + " " + modes;
+	if (!params.empty())
+		res += " " + params;
+	return res;
+}
+
+inline std::string ERR_USERNOTINCHANNEL(const std::string& nick, const std::string& target, const std::string& chan) {
+	return ":ft_ircserv 441 " + nick + " " + target + " " + chan + " :They aren't on that channel";
+}
+
+inline std::string ERR_USERONCHANNEL(const std::string& nick, const std::string& target, const std::string& chan) {
+	return ":ft_ircserv 443 " + nick + " " + target + " " + chan + " :is already on channel";
+}
+
+inline std::string RPL_INVITING(const std::string& nick, const std::string& target, const std::string& chan) {
+	return ":ft_ircserv 341 " + nick + " " + target + " " + chan;
+}
+
 #endif
