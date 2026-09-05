@@ -1,4 +1,5 @@
 NAME = ircserv
+BOT_NAME = ircbot
 
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I./includes
@@ -24,20 +25,31 @@ SRCS =	srcs/main.cpp \
 
 OBJS = $(SRCS:.cpp=.o)
 
+BOT_SRCS = bot/main.cpp \
+		srcs/Bot.cpp \
+		srcs/Command.cpp
+
+BOT_OBJS = $(BOT_SRCS:.cpp=.o)
+
 all: $(NAME)
+
+bonus: $(BOT_NAME)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
+
+$(BOT_NAME): $(BOT_OBJS)
+	$(CXX) $(CXXFLAGS) $(BOT_OBJS) -o $(BOT_NAME)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) $(BOT_OBJS)
 
 fclean: clean
-	rm -f $(NAME)
+	rm -f $(NAME) $(BOT_NAME)
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all bonus clean fclean re
