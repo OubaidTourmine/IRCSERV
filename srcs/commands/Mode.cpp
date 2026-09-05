@@ -11,6 +11,17 @@ static std::string intToString(int val)
 
 void Server::HandleMode(Client &client, const command &cmd)
 {
+	std::string clientNick;
+	if (client.getNick().empty())
+		clientNick = "*";
+	else
+		clientNick = client.getNick();
+	if (!client.isRegistered())
+	{
+		SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
+		return;
+	}
+
 	if (cmd.params.empty())
 	{
 		SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(client.getNick(), "MODE"));

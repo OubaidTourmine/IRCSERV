@@ -2,7 +2,11 @@
 
 void Server::HandlePart(Client &client, const command &cmd)
 {
-	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
+	std::string clientNick;
+	if (client.getNick().empty())
+		clientNick = "*";
+	else
+		clientNick = client.getNick();
 	if (!client.isRegistered())
 	{
 		SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
@@ -16,7 +20,11 @@ void Server::HandlePart(Client &client, const command &cmd)
 	}
 
 	std::string channels = cmd.params[0];
-	std::string reason = (cmd.params.size() > 1) ? cmd.params[1] : "";
+	std::string reason;
+	if (cmd.params.size() > 1)
+		reason = cmd.params[1];
+	else
+		reason = "";
 	for (size_t i = 2; i < cmd.params.size(); ++i)
 		reason += " " + cmd.params[i];
 
@@ -24,8 +32,15 @@ void Server::HandlePart(Client &client, const command &cmd)
 	while (start < channels.size())
 	{
 		size_t comma = channels.find(',', start);
-		std::string chanName = (comma == std::string::npos) ? channels.substr(start) : channels.substr(start, comma - start);
-		start = (comma == std::string::npos) ? channels.size() : comma + 1;
+		std::string chanName;
+		if (comma == std::string::npos)
+			chanName = channels.substr(start);
+		else
+			chanName = channels.substr(start, comma - start);
+		if (comma == std::string::npos)
+			start = channels.size();
+		else
+			start = comma + 1;
 
 		if (chanName.empty())
 			continue;

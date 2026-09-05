@@ -3,7 +3,14 @@
 void Server::HandlePing(Client &client, const command &cmd)
 {
 	if (cmd.params.empty())
-		SendReply(client.GetFd(), ":ft_ircserv 461 " + (client.getNick().empty() ? "*" : client.getNick()) + " PING :Not enough parameters");
+	{
+		std::string nick;
+		if (client.getNick().empty())
+			nick = "*";
+		else
+			nick = client.getNick();
+		SendReply(client.GetFd(), ":ft_ircserv 461 " + nick + " PING :Not enough parameters");
+	}
 	else
 		SendReply(client.GetFd(), ":ft_ircserv PONG ft_ircserv :" + cmd.params[0]);
 }

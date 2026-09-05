@@ -38,8 +38,17 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::string nick = argc >= 5 ? argv[4] : "ircbot";
-    std::string channel = argc == 6 ? argv[5] : "#bot";
+    std::string nick;
+    if (argc >= 5)
+        nick = argv[4];
+    else
+        nick = "ircbot";
+
+    std::string channel;
+    if (argc == 6)
+        channel = argv[5];
+    else
+        channel = "#bot";
     if (channel.empty() || (channel[0] != '#' && channel[0] != '&'))
         channel = "#" + channel;
 

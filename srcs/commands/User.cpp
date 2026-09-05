@@ -2,7 +2,11 @@
 
 void Server::HandleUser(Client &client, const command &cmd)
 {
-	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
+	std::string clientNick;
+	if (client.getNick().empty())
+		clientNick = "*";
+	else
+		clientNick = client.getNick();
 	if (client.isRegistered())
 	{
 		SendReply(client.GetFd(), ":ft_ircserv 462 " + clientNick + " :Unauthorized command (already registered)");

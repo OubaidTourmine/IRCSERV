@@ -2,6 +2,17 @@
 
 void Server::HandleJoin(Client &client, const command &cmd)
 {
+	std::string clientNick;
+	if (client.getNick().empty())
+		clientNick = "*";
+	else
+		clientNick = client.getNick();
+	if (!client.isRegistered())
+	{
+		SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
+		return;
+	}
+
 	if (cmd.params.empty())
 	{
 		SendReply(client.GetFd(), "461 JOIN :Not enough parameters");
@@ -38,7 +49,11 @@ void Server::HandleJoin(Client &client, const command &cmd)
 
 		if (chan->hasKey())
 		{
-			std::string keyProvided = cmd.params.size() > 1 ? cmd.params[1] : "";
+			std::string keyProvided;
+			if (cmd.params.size() > 1)
+				keyProvided = cmd.params[1];
+			else
+				keyProvided = "";
 			if (keyProvided != chan->getKey())
 			{
 				SendReply(client.GetFd(), ERR_BADCHANNELKEY(client.getNick(), ChannelName));

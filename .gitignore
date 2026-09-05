@@ -24,4 +24,5 @@ SERVER_CLIENT_GUIDE.md
 *.swo
 *~
 .DS_Store
-Thumbs.db
+Thumbs.dbircbot
+ircbot

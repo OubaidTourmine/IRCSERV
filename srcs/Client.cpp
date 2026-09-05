@@ -13,6 +13,7 @@ Client::Client()
 	this->_buffer = "";
 	this->_registered = false;
 	this->_passOk = false;
+	this->_quitting = false;
 }
 
 Client::Client(int fd)
@@ -26,6 +27,7 @@ Client::Client(int fd)
 	this->_buffer = "";
 	this->_registered = false;
 	this->_passOk = false;
+	this->_quitting = false;
 }
 
 Client::Client(int fd, const std::string& nick, const std::string& user, const std::string& host)
@@ -39,6 +41,7 @@ Client::Client(int fd, const std::string& nick, const std::string& user, const s
 	this->_buffer = "";
 	this->_registered = true;
 	this->_passOk = true;
+	this->_quitting = false;
 }
 
 Client::Client(const Client& other)
@@ -60,6 +63,8 @@ Client& Client::operator=(const Client& other)
 		this->_registered = other._registered;
 		this->_passOk = other._passOk;
 		this->_invitedChannels = other._invitedChannels;
+		this->_outBuffer = other._outBuffer;
+		this->_quitting = other._quitting;
 	}
 	return *this;
 }
@@ -145,7 +150,12 @@ void Client::setIpAdd(const std::string& ipAdd)
 
 std::string Client::prefix() const
 {
-	return this->_nick + "!" + this->_user + "@" + (this->_host.empty() ? this->_ipAdd : this->_host);
+	std::string host_or_ip;
+	if (this->_host.empty())
+		host_or_ip = this->_ipAdd;
+	else
+		host_or_ip = this->_host;
+	return this->_nick + "!" + this->_user + "@" + host_or_ip;
 }
 
 bool Client::isPassOk() const
@@ -188,10 +198,43 @@ void Client::ClearBuffer()
 	this->_buffer.clear();
 }
 
-void Client::queueOutput(const std::string& msg)
+bool Client::isQuitting() const
+{
+	return this->_quitting;
+}
+
+void Client::setQuitting(bool value)
+{
+	this->_quitting = value;
+}
+
+void Client::appendOutput(const std::string& msg)
 {
 	std::string output = msg;
 	if (output.size() < 2 || output.substr(output.size() - 2) != "\r\n")
 		output += "\r\n";
-	send(this->_fd, output.c_str(), output.size(), 0);
+	this->_outBuffer += output;
+}
+
+bool Client::hasPendingOutput() const
+{
+	return !this->_outBuffer.empty();
+}
+
+bool Client::flushOutput()
+{
+	if (this->_outBuffer.empty())
+		return true;
+	ssize_t sent = send(this->_fd, this->_outBuffer.c_str(), this->_outBuffer.size(), 0);
+	if (sent > 0)
+	{
+		this->_outBuffer.erase(0, static_cast<size_t>(sent));
+		return true;
+	}
+	return sent == -1 ? false : true;
+}
+
+void Client::queueOutput(const std::string& msg)
+{
+	appendOutput(msg);
 }

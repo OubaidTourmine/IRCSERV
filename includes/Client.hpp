@@ -66,6 +66,15 @@ public:
 	std::set<std::string> _invitedChannels;
 
 	// Output
+	std::string _outBuffer;
+	bool        _quitting;
+
+	void appendOutput(const std::string& msg);
+	bool hasPendingOutput() const;
+	bool flushOutput();
+	bool isQuitting() const;
+	void setQuitting(bool value);
+
 	void queueOutput(const std::string& msg);
 };
 

@@ -200,9 +200,7 @@ void Server::ReceiveNewData(int fd)
 
 	if (bytes <= 0)
 	{
-		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
-		close(fd);
-		ClearClients(fd);
+		HandlePeerGone(fd, "Connection reset by peer");
 		return;
 	}
 
@@ -236,6 +234,17 @@ void Server::ServerRun()
 {
 	while (Server::_Signal == false)
 	{
+		for (size_t i = 0; i < this->_fds.size(); ++i)
+		{
+			if (this->_fds[i].fd == this->_SerSocketFd)
+				continue;
+			Client *c = GetClientByFd(this->_fds[i].fd);
+			this->_fds[i].events = POLLIN;
+			if (c && c->hasPendingOutput())
+				this->_fds[i].events |= POLLOUT;
+			this->_fds[i].revents = 0;
+		}
+
 		int ret = poll(&this->_fds[0], this->_fds.size(), -1);
 		if (ret == -1)
 		{
@@ -246,12 +255,32 @@ void Server::ServerRun()
 
 		for (size_t i = 0; i < this->_fds.size(); ++i)
 		{
-			if (this->_fds[i].revents & POLLIN)
-			{
-				if (this->_fds[i].fd == this->_SerSocketFd)
-					AcceptNewClient();
-				else
-					ReceiveNewData(this->_fds[i].fd);
+			int fd = this->_fds[i].fd;
+			short re = this->_fds[i].revents;
+			if (re == 0) continue;
+			size_t before = this->_fds.size();
+
+			if (fd == this->_SerSocketFd) { if (re & POLLIN) AcceptNewClient(); continue; }
+
+			if (re & POLLOUT) {
+				Client *c = GetClientByFd(fd);
+				if (c && !c->flushOutput()) {
+					HandlePeerGone(fd, "Connection reset by peer");
+				}
+				else if (c && c->isQuitting() && !c->hasPendingOutput()) {
+					HandlePeerGone(fd, "Client Quit");
+				}
+				if (this->_fds.size() < before) { --i; continue; }
+			}
+
+			if (re & POLLIN) {
+				ReceiveNewData(fd);
+				if (this->_fds.size() < before) { --i; continue; }
+			}
+
+			if ((re & (POLLHUP | POLLERR | POLLNVAL)) && GetClientByFd(fd)) {
+				HandlePeerGone(fd, "Connection reset by peer");
+				if (this->_fds.size() < before) { --i; continue; }
 			}
 		}
 	}
@@ -278,10 +307,10 @@ Client* Server::GetClientByNick(const std::string &nick)
 
 void Server::SendReply(int fd, const std::string &message)
 {
-	std::string msg = message;
-	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
-		msg += "\r\n";
-	send(fd, msg.c_str(), msg.size(), 0);
+	Client *cli = GetClientByFd(fd);
+	if (!cli)
+		return;
+	cli->appendOutput(message);
 }
 
 void Server::ParseCommands(Client &client, const std::string &line)
@@ -308,7 +337,10 @@ void Server::ParseCommands(Client &client, const std::string &line)
 	else if (cmd.command == "CAP")
 		HandleCap(client, cmd);
 	else if (cmd.command == "QUIT")
+	{
 		HandleQuit(client, cmd);
+		return;
+	}
 	else if (cmd.command == "PART")
 		HandlePart(client, cmd);
 	else if (cmd.command == "JOIN")
@@ -349,14 +381,39 @@ void Server::CheckRegistration(Client &client)
 void Server::DisconnectClient(int fd, const std::string &reason)
 {
 	Client *cli = GetClientByFd(fd);
+	if (!cli || cli->isQuitting())
+		return;
+
+	cli->setQuitting(true);
+
+	std::string quitMsg = ":" + cli->prefix() + " QUIT :" + reason;
+	BroadcastToSharedChannels(cli, quitMsg, cli);
+
+	std::string host_or_ip;
+	if (cli->getHost().empty())
+		host_or_ip = cli->getIpAdd();
+	else
+		host_or_ip = cli->getHost();
+	std::string errClosing = "ERROR :Closing Link: " + host_or_ip + " (" + reason + ")";
+	SendReply(fd, errClosing);
+}
+
+void Server::HandlePeerGone(int fd, const std::string &reason)
+{
+	Client *cli = GetClientByFd(fd);
 	if (!cli)
 		return;
 
 	std::string quitMsg = ":" + cli->prefix() + " QUIT :" + reason;
 	BroadcastToSharedChannels(cli, quitMsg, cli);
-
-	std::string errClosing = "ERROR :Closing Link: " + (cli->getHost().empty() ? cli->getIpAdd() : cli->getHost()) + " (" + reason + ")";
-	SendReply(fd, errClosing);
+	
+	// Remove from channels directly so the member is actually gone
+	std::set<Client*> recipients;
+	for (std::vector<Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
+	{
+		if (it->isMember(cli))
+			it->removeMember(cli);
+	}
 
 	std::cout << RED << "Client <" << fd << "> Disconnected (" << reason << ")" << WHI << std::endl;
 	shutdown(fd, SHUT_RDWR);

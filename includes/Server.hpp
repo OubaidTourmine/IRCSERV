@@ -87,6 +87,7 @@ public:
 	void CloseFds();
 	void ClearClients(int fd);
 	void DisconnectClient(int fd, const std::string &reason);
+	void HandlePeerGone(int fd, const std::string &reason);
 	void BroadcastToSharedChannels(Client *client, const std::string &message, Client *exclude = NULL);
 
 	// Client Lookups & Replies

@@ -2,7 +2,11 @@
 
 void Server::HandlePass(Client &client, const command &cmd)
 {
-	std::string nick = client.getNick().empty() ? "*" : client.getNick();
+	std::string nick;
+	if (client.getNick().empty())
+		nick = "*";
+	else
+		nick = client.getNick();
 	if (cmd.params.empty())
 		SendReply(client.GetFd(), ERR_NEEDMOREPARAMS(nick, "PASS"));
 	else if (client.isRegistered())

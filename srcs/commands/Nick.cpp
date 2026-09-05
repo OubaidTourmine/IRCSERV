@@ -2,7 +2,11 @@
 
 void Server::HandleNick(Client &client, const command &cmd)
 {
-	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
+	std::string clientNick;
+	if (client.getNick().empty())
+		clientNick = "*";
+	else
+		clientNick = client.getNick();
 	if (cmd.params.empty())
 	{
 		SendReply(client.GetFd(), ":ft_ircserv 431 " + clientNick + " :No nickname given");
@@ -53,7 +57,12 @@ void Server::HandleNick(Client &client, const command &cmd)
 
 	if (client.isRegistered())
 	{
-		std::string message = ":" + oldNick + "!" + client.getUser() + "@" + (client.getHost().empty() ? client.getIpAdd() : client.getHost()) + " NICK :" + newNick;
+		std::string host_or_ip;
+		if (client.getHost().empty())
+			host_or_ip = client.getIpAdd();
+		else
+			host_or_ip = client.getHost();
+		std::string message = ":" + oldNick + "!" + client.getUser() + "@" + host_or_ip + " NICK :" + newNick;
 		SendReply(client.GetFd(), message);
 		BroadcastToSharedChannels(&client, message, &client);
 	}

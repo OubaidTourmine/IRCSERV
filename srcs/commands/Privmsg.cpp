@@ -2,7 +2,11 @@
 
 void Server::HandlePrivmsg(Client &client, const command &cmd)
 {
-	std::string clientNick = client.getNick().empty() ? "*" : client.getNick();
+	std::string clientNick;
+	if (client.getNick().empty())
+		clientNick = "*";
+	else
+		clientNick = client.getNick();
 	if (!client.isRegistered())
 	{
 		SendReply(client.GetFd(), ERR_NOTREGISTERED(clientNick));
@@ -30,8 +34,15 @@ void Server::HandlePrivmsg(Client &client, const command &cmd)
 	while (start < targets.size())
 	{
 		size_t comma = targets.find(',', start);
-		std::string target = (comma == std::string::npos) ? targets.substr(start) : targets.substr(start, comma - start);
-		start = (comma == std::string::npos) ? targets.size() : comma + 1;
+		std::string target;
+		if (comma == std::string::npos)
+			target = targets.substr(start);
+		else
+			target = targets.substr(start, comma - start);
+		if (comma == std::string::npos)
+			start = targets.size();
+		else
+			start = comma + 1;
 
 		if (target.empty())
 			continue;

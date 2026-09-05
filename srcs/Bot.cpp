@@ -244,7 +244,12 @@ void Bot::handleBotCommand(const std::string& sender, const std::string& target,
 		replyTarget = sender;
 
 	size_t end = text.find(' ');
-	std::string name = text.substr(1, end == std::string::npos ? std::string::npos : end - 1);
+	size_t length;
+	if (end == std::string::npos)
+		length = std::string::npos;
+	else
+		length = end - 1;
+	std::string name = text.substr(1, length);
 	for (size_t i = 0; i < name.size(); ++i)
 		name[i] = static_cast<char>(std::tolower(name[i]));
 
