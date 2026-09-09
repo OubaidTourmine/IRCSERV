@@ -190,46 +190,54 @@ void Bot::reply(const std::string& target, const std::string& text)
 
 void Bot::run()
 {
-	while (_running && !_signal)
+	bool shuttingDown = false;
+
+	while (true)
 	{
+		// Ctrl-C starts a graceful shutdown inside the same event loop.
+		if (_signal && !shuttingDown)
+		{
+			shuttingDown = true;
+			if (_fd != -1)
+				queueLine("QUIT :Bot shutting down");
+		}
+
+		// A connection error ends the bot immediately. During a signal-driven
+		// shutdown, wait until the queued QUIT has been flushed first.
+		if (!_running && !shuttingDown)
+			break;
+		if (shuttingDown && _outBuffer.empty())
+			break;
+
 		struct pollfd descriptor;
 		descriptor.fd = _fd;
-		descriptor.events = POLLIN;
+		descriptor.events = 0;
+		if (!shuttingDown && _running)
+			descriptor.events |= POLLIN;
 		if (!_outBuffer.empty())
 			descriptor.events |= POLLOUT;
 		descriptor.revents = 0;
 
-		int result = poll(&descriptor, 1, -1);
+		int timeout;
+		if (shuttingDown)
+			timeout = 1000;
+		else
+			timeout = -1;
+		int result = poll(&descriptor, 1, timeout);
 		if (result == -1)
 		{
-			if (_signal)
-				break;
+			if (errno == EINTR)
+				continue;
 			throw std::runtime_error("bot poll() failed");
 		}
+		if (result == 0)
+			break;
 		if (descriptor.revents & (POLLHUP | POLLERR | POLLNVAL))
 			break;
-		if (descriptor.revents & POLLIN)
+		if (!shuttingDown && (descriptor.revents & POLLIN))
 			readFromServer();
 		if (descriptor.revents & POLLOUT)
 			flushOutput();
-	}
-
-	if (_fd != -1 && _running)
-	{
-		queueLine("QUIT :Bot shutting down");
-		while (!_outBuffer.empty())
-		{
-			struct pollfd descriptor;
-			descriptor.fd = _fd;
-			descriptor.events = POLLOUT;
-			descriptor.revents = 0;
-			if (poll(&descriptor, 1, 1000) <= 0)
-				break;
-			if (descriptor.revents & POLLOUT)
-				flushOutput();
-			if (descriptor.revents & (POLLHUP | POLLERR | POLLNVAL))
-				break;
-		}
 	}
 }
 

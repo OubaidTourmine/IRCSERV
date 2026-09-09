@@ -231,7 +231,9 @@ bool Client::flushOutput()
 		this->_outBuffer.erase(0, static_cast<size_t>(sent));
 		return true;
 	}
-	return sent == -1 ? false : true;
+	if (sent == -1)
+		return false;
+	return true;
 }
 
 void Client::queueOutput(const std::string& msg)
