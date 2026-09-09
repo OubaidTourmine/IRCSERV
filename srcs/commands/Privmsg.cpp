@@ -49,7 +49,6 @@ void Server::HandlePrivmsg(Client &client, const command &cmd)
 
 		std::string formattedMsg = ":" + client.prefix() + " PRIVMSG " + target + " :" + text;
 
-		// Channel target
 		if (target[0] == '#' || target[0] == '&')
 		{
 			Channel *chan = GetChannelByName(target);
@@ -67,7 +66,6 @@ void Server::HandlePrivmsg(Client &client, const command &cmd)
 
 			chan->broadcast(formattedMsg, &client);
 		}
-		// User target
 		else
 		{
 			Client *targetClient = GetClientByNick(target);

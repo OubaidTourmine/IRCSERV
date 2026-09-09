@@ -194,7 +194,6 @@ void Bot::run()
 
 	while (true)
 	{
-		// Ctrl-C starts a graceful shutdown inside the same event loop.
 		if (_signal && !shuttingDown)
 		{
 			shuttingDown = true;
@@ -202,8 +201,6 @@ void Bot::run()
 				queueLine("QUIT :Bot shutting down");
 		}
 
-		// A connection error ends the bot immediately. During a signal-driven
-		// shutdown, wait until the queued QUIT has been flushed first.
 		if (!_running && !shuttingDown)
 			break;
 		if (shuttingDown && _outBuffer.empty())

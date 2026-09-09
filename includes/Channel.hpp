@@ -17,7 +17,7 @@ private:
 	bool _topicRestricted;
 	std::string _key;
 	bool _hasKey;
-	int _userLimit; // -1 means no limit
+	int _userLimit;
 
 public:
 	Channel();
@@ -26,46 +26,37 @@ public:
 	Channel& operator=(const Channel& other);
 	~Channel();
 
-	// Membership
 	void addMember(Client* c);
 	void removeMember(Client* c);
 	bool isMember(Client* c) const;
 	bool isEmpty() const;
 	std::set<Client*> getMembers() const;
 
-	// Operators
 	void addOperator(Client* c);
 	bool isOperator(Client* c) const;
 	void removeOperator(Client* c);
 
-	// Topic
 	std::string getTopic() const;
 	void setTopic(const std::string& topic);
 
-	//========================================
-
-
-	// Modes
-	bool isInviteOnly() const;      // +i
-	bool isTopicRestricted() const; // +t
+	bool isInviteOnly() const;
+	bool isTopicRestricted() const;
 	void setInviteOnly(bool v);
 	void setTopicRestricted(bool v);
 
-	std::string getKey() const;     // +k
+	std::string getKey() const;
 	void setKey(const std::string& key);
 	void clearKey();
 	bool hasKey() const;
 
-	int getUserLimit() const;       // +l, -1 = unset
+	int getUserLimit() const;
 	void setUserLimit(int limit);
 	void clearUserLimit();
 
-	// Invites
 	void invite(Client* c);
 	bool isInvited(Client* c) const;
 	void consumeInvite(Client* c);
 
-	// Fan-out
 	void broadcast(const std::string& msg, Client* exclude = 0);
 
 	std::string getName() const;

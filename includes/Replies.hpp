@@ -5,7 +5,6 @@
 
 #define SERVER_NAME "ft_ircserv"
 
-// Numeric reply helper functions
 inline std::string RPL_WELCOME(const std::string& nick) {
 	return ":ft_ircserv 001 " + nick + " :Welcome to the Internet Relay Network " + nick;
 }

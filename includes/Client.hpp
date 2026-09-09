@@ -17,7 +17,6 @@ private:
 	bool        _passOk;
 
 public:
-	// Orthodox Canonical Form
 	Client();
 	Client(int fd);
 	Client(int fd, const std::string& nick, const std::string& user, const std::string& host);
@@ -25,7 +24,6 @@ public:
 	Client& operator=(const Client& other);
 	~Client();
 
-	// Identity & Getters/Setters
 	int getFd() const;
 	int GetFd() const;
 	void setFd(int fd);
@@ -47,9 +45,8 @@ public:
 	std::string getIpAdd() const;
 	void setIpAdd(const std::string& ipAdd);
 
-	std::string prefix() const; // "nick!user@host"
+	std::string prefix() const;
 
-	// Registration state
 	bool isPassOk() const;
 	bool IsPasswordAccepted() const;
 	void setPassOk(bool passOk);
@@ -57,15 +54,12 @@ public:
 	bool isRegistered() const;
 	void setRegistered(bool value);
 
-	// Buffer operations
 	std::string& GetBuffer();
 	void AppendToBuffer(const std::string& data);
 	void ClearBuffer();
 
-	// Operator / channel invite tracking
 	std::set<std::string> _invitedChannels;
 
-	// Output
 	std::string _outBuffer;
 	bool        _quitting;
 

@@ -24,7 +24,6 @@ command ParseLine(const std::string &line)
 	if (line.empty())
 		return cmd;
 
-	// Step 1: Prefix (optional, starts with ':')
 	if (line[i] == ':')
 	{
 		i++;
@@ -32,10 +31,8 @@ command ParseLine(const std::string &line)
 		i = skipWhiteSpaces(line, i);
 	}
 
-	// Step 2: Command
 	cmd.command = readToSpace(line, i);
 
-	// Step 3: Parameters (max 15 per RFC 1459)
 	while (cmd.params.size() < 15)
 	{
 		i = skipWhiteSpaces(line, i);

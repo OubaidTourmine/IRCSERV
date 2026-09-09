@@ -13,14 +13,13 @@ private:
     std::string _nick;
     std::string _channel;
 
-    std::string _inBuffer;      // accumulates recv()'d bytes, drained on '\n'
-    std::string _outBuffer;     // pending writes, drained on POLLOUT
-    bool        _registered;    // set when 001 arrives
-    bool        _joined;        // set when our own JOIN echoes back
+    std::string _inBuffer;
+    std::string _outBuffer;
+    bool        _registered;
+    bool        _joined;
     bool        _running;
-    static bool _signal;        // set by SIGINT handler
+    static bool _signal;
 
-    // non-copyable: private, undefined  (C++98 idiom)
     Bot(const Bot&);
     Bot& operator=(const Bot&);
 
@@ -29,20 +28,19 @@ public:
         const std::string& nick, const std::string& channel);
     ~Bot();
 
-    void connectToServer();     // socket + connect + O_NONBLOCK
-    void run();                 // the poll loop
+    void connectToServer();
+    void run();
     static void signalHandler(int);
 
 private:
-    void queueLine(const std::string& line);   // append to _outBuffer (+ CRLF)
-    void flushOutput();                        // POLLOUT: partial-aware send
-    void readFromServer();                     // POLLIN: recv + append
-    void processBuffer();                      // drain complete lines
-    void handleLine(const std::string& line);  // ParseLine + dispatch
+    void queueLine(const std::string& line);   
+    void flushOutput();
+    void readFromServer();
+    void processBuffer();
+    void handleLine(const std::string& line); 
     void sendRegistration();
     void reply(const std::string& target, const std::string& text);
 
-    // BotCommands.cpp
     void handleBotCommand(const std::string& sender,
                           const std::string& target,
                           const std::string& text);

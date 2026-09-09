@@ -56,14 +56,11 @@ void Server::HandleInvite(Client &client, const command &cmd)
         return;
     }
 
-    // Give the target permission to join the channel
     chan->invite(target);
 
-    // Tell the inviter that the invitation was successful
     SendReply(client.GetFd(),
         "341 " + client.getNick() + " " + targetNick + " " + channelName);
 
-    // Send the INVITE message to the target
     std::string inviteMsg =
         ":" + client.getNick() + "!" + client.getUser() +
         "@" + client.getHost() +

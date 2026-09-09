@@ -39,19 +39,16 @@ private:
 	std::vector<Channel> _channels;
 
 public:
-	// Orthodox Canonical Form
 	Server();
 	Server(const Server& other);
 	Server& operator=(const Server& other);
 	~Server();
 
-	// Setters & Getters
 	void SetPassword(const std::string& pass);
 	std::string GetPassword() const;
 	void SetPort(int port);
 	int GetPort() const;
 
-	// Server Engine
 	void ServerInit();
 	void ServerInit(int port, const std::string& password);
 	void SerSocket();
@@ -59,7 +56,6 @@ public:
 	void ReceiveNewData(int fd);
 	void ServerRun();
 
-	// Command Dispatch & Handlers
 	void ParseCommands(Client &client, const std::string &line);
 	void HandlePass(Client &client, const command &cmd);
 	void HandleNick(Client &client, const command &cmd);
@@ -76,13 +72,11 @@ public:
 	void HandleMode(Client &client, const command &cmd);
 	void CheckRegistration(Client &client);
 
-	// Channels
 
 	Channel* GetChannelByName(const std::string &name);
 
 
 
-	// Signals & Cleanu
 	static void SignalHandler(int signum);
 	void CloseFds();
 	void ClearClients(int fd);
@@ -90,7 +84,6 @@ public:
 	void HandlePeerGone(int fd, const std::string &reason);
 	void BroadcastToSharedChannels(Client *client, const std::string &message, Client *exclude = NULL);
 
-	// Client Lookups & Replies
 	Client* GetClientByFd(int fd);
 	Client* GetClientByNick(const std::string &nick);
 	void SendReply(int fd, const std::string &message);

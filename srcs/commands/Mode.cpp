@@ -30,7 +30,7 @@ void Server::HandleMode(Client &client, const command &cmd)
 
 	std::string target = cmd.params[0];
 	if (target[0] != '#' && target[0] != '&')
-		return; // We only handle channel modes for now
+		return;
 
 	Channel* chan = GetChannelByName(target);
 	if (!chan)
@@ -44,13 +44,17 @@ void Server::HandleMode(Client &client, const command &cmd)
 		std::string modes = "+";
 		std::string params = "";
 		
-		if (chan->isInviteOnly()) modes += "i";
-		if (chan->isTopicRestricted()) modes += "t";
-		if (chan->hasKey()) {
+		if (chan->isInviteOnly())
+			modes += "i";
+		if (chan->isTopicRestricted())
+			modes += "t";
+		if (chan->hasKey())
+		{
 			modes += "k";
 			params += chan->getKey() + " ";
 		}
-		if (chan->getUserLimit() != -1) {
+		if (chan->getUserLimit() != -1)
+		{
 			modes += "l";
 			params += intToString(chan->getUserLimit()) + " ";
 		}
@@ -78,8 +82,18 @@ void Server::HandleMode(Client &client, const command &cmd)
 	for (size_t i = 0; i < modestring.size(); ++i)
 	{
 		char m = modestring[i];
-		if (m == '+') { adding = true; if (modesChanged.empty() || modesChanged[modesChanged.length()-1] != '+') modesChanged += "+"; }
-		else if (m == '-') { adding = false; if (modesChanged.empty() || modesChanged[modesChanged.length()-1] != '-') modesChanged += "-"; }
+		if (m == '+')
+		{
+			adding = true;
+			if (modesChanged.empty() || modesChanged[modesChanged.length()-1] != '+')
+				modesChanged += "+";
+		}
+		else if (m == '-')
+		{
+			adding = false;
+			if (modesChanged.empty() || modesChanged[modesChanged.length()-1] != '-')
+				modesChanged += "-";
+		}
 		else if (m == 'i')
 		{
 			if (chan->isInviteOnly() != adding)
@@ -110,14 +124,18 @@ void Server::HandleMode(Client &client, const command &cmd)
 			}
 			else
 			{
-                if (paramIndex < cmd.params.size()) {
+                if (paramIndex < cmd.params.size())
+				{
                     std::string key = cmd.params[paramIndex++];
-                    if (chan->hasKey() && chan->getKey() == key) {
+                    if (chan->hasKey() && chan->getKey() == key)
+					{
                         chan->clearKey();
                         modesChanged += "k";
                         paramsChanged += " " + key;
                     }
-                } else if (chan->hasKey()) {
+                }
+				else if (chan->hasKey())
+				{
                     chan->clearKey();
                     modesChanged += "k";
                 }
@@ -183,23 +201,32 @@ void Server::HandleMode(Client &client, const command &cmd)
 
     std::string cleanModes = "";
     char lastSign = ' ';
-    for (size_t i = 0; i < modesChanged.size(); i++) {
-        if (modesChanged[i] == '+' || modesChanged[i] == '-') {
+    for (size_t i = 0; i < modesChanged.size(); i++)
+	{
+        if (modesChanged[i] == '+' || modesChanged[i] == '-')
+		{
             lastSign = modesChanged[i];
-            if (i == modesChanged.size() - 1) continue;
+            if (i == modesChanged.size() - 1)
+				continue;
             bool hasMode = false;
-            for (size_t j = i + 1; j < modesChanged.size(); j++) {
-                if (modesChanged[j] != '+' && modesChanged[j] != '-') {
+            for (size_t j = i + 1; j < modesChanged.size(); j++)
+			{
+                if (modesChanged[j] != '+' && modesChanged[j] != '-')
+				{
                     hasMode = true;
                     break;
                 }
             }
-            if (hasMode) {
-                if (cleanModes.empty() || cleanModes[cleanModes.length()-1] != lastSign) {
+            if (hasMode)
+			{
+                if (cleanModes.empty() || cleanModes[cleanModes.length()-1] != lastSign)
+				{
                     cleanModes += lastSign;
                 }
             }
-        } else {
+        }
+		else
+		{
             cleanModes += modesChanged[i];
         }
     }

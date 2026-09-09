@@ -33,7 +33,6 @@ void Server::HandleTopic(Client &client, const command &cmd)
 		return;
 	}
 
-	// 1 parameter: View current topic
 	if (cmd.params.size() == 1)
 	{
 		if (chan->getTopic().empty())
@@ -43,8 +42,6 @@ void Server::HandleTopic(Client &client, const command &cmd)
 		return;
 	}
 
-	// 2 or more parameters: Set / Change topic
-	// Check +t mode restrictions: if topic is restricted and client is not an operator
 	if (chan->isTopicRestricted() && !chan->isOperator(&client))
 	{
 		SendReply(client.GetFd(), ERR_CHANOPRIVSNEEDED(clientNick, chanName));
@@ -57,7 +54,6 @@ void Server::HandleTopic(Client &client, const command &cmd)
 
 	chan->setTopic(newTopic);
 
-	// Broadcast topic change to ALL channel members (including sender)
 	std::string topicMsg = ":" + client.prefix() + " TOPIC " + chanName + " :" + newTopic;
 	chan->broadcast(topicMsg);
 }

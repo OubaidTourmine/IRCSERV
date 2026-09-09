@@ -213,10 +213,12 @@ void Server::ReceiveNewData(int fd)
 	while (true)
 	{
 		Client *c = GetClientByFd(fd);
-		if (!c) break;
+		if (!c)
+			break;
 		
 		size_t pos = c->GetBuffer().find('\n');
-		if (pos == std::string::npos) break;
+		if (pos == std::string::npos)
+			break;
 
 		std::string line = c->GetBuffer().substr(0, pos);
 		if (!line.empty() && line[line.size() - 1] == '\r')
@@ -260,14 +262,21 @@ void Server::ServerRun()
 			if (re == 0) continue;
 			size_t before = this->_fds.size();
 
-			if (fd == this->_SerSocketFd) { if (re & POLLIN) AcceptNewClient(); continue; }
-
+			if (fd == this->_SerSocketFd)
+			{
+				if (re & POLLIN)
+				{
+					AcceptNewClient();
+				}
+				continue;
+			}
 			if (re & POLLOUT) {
 				Client *c = GetClientByFd(fd);
 				if (c && !c->flushOutput()) {
 					HandlePeerGone(fd, "Connection reset by peer");
 				}
-				else if (c && c->isQuitting() && !c->hasPendingOutput()) {
+				else if (c && c->isQuitting() && !c->hasPendingOutput())
+				{
 					HandlePeerGone(fd, "Client Quit");
 				}
 				if (this->_fds.size() < before) { --i; continue; }
@@ -275,12 +284,21 @@ void Server::ServerRun()
 
 			if (re & POLLIN) {
 				ReceiveNewData(fd);
-				if (this->_fds.size() < before) { --i; continue; }
+				if (this->_fds.size() < before)
+				{
+					--i;
+					continue;
+				}
 			}
 
-			if ((re & (POLLHUP | POLLERR | POLLNVAL)) && GetClientByFd(fd)) {
+			if ((re & (POLLHUP | POLLERR | POLLNVAL)) && GetClientByFd(fd))
+			{
 				HandlePeerGone(fd, "Connection reset by peer");
-				if (this->_fds.size() < before) { --i; continue; }
+				if (this->_fds.size() < before)
+				{
+					--i;
+					continue;
+				}
 			}
 		}
 	}
@@ -407,7 +425,6 @@ void Server::HandlePeerGone(int fd, const std::string &reason)
 	std::string quitMsg = ":" + cli->prefix() + " QUIT :" + reason;
 	BroadcastToSharedChannels(cli, quitMsg, cli);
 	
-	// Remove from channels directly so the member is actually gone
 	std::set<Client*> recipients;
 	for (std::vector<Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
 	{

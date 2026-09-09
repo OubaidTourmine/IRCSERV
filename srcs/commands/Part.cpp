@@ -58,16 +58,13 @@ void Server::HandlePart(Client &client, const command &cmd)
 			continue;
 		}
 
-		// Broadcast PART message to all channel members (including leaving client)
 		std::string partMsg = ":" + client.prefix() + " PART " + chanName;
 		if (!reason.empty())
 			partMsg += " :" + reason;
 		chan->broadcast(partMsg);
 
-		// Remove client from channel
 		chan->removeMember(&client);
 
-		// If channel is now empty, remove it from _channels vector
 		if (chan->isEmpty())
 		{
 			for (std::vector<Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
